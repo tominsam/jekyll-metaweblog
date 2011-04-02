@@ -13,6 +13,12 @@ require 'json'
 class MetaWeblog
     attr_accessor :store
     
+    # keys should map to file extensions. We rename the file if the filter is changed.
+    @@filters = [
+        { "key" => "markdown", "label" => "Markdown" },
+        { "key" => "html", "label" => "HTML" },
+    ]
+
     def initialize(store)
         self.store = store
     end
@@ -32,6 +38,14 @@ class MetaWeblog
             :mt_keywords => post.tags.join(", "),
             :custom_fields => custom_fields(post),
         }
+    end
+    def page_response(post)
+        return post_response(post).merge({
+            :page_id => post.filename,
+            :dateCreated => Date.today,
+            :page_status => "published",
+            :wp_page_template => post.data["layout"],
+        })
     end
     
     # return a custom post data structure. Can't just return eveything, because if the
@@ -72,7 +86,7 @@ class MetaWeblog
         # this (in theory) will map directly to file extension
         if data.include? "mt_convert_breaks"
             conv = data["mt_convert_breaks"]
-            if [ "markdown", "html" ].include? conv
+            if @@filters.map{|f| f["key"] }.include? conv
                 post.filetype = conv
             end
         end
@@ -98,10 +112,10 @@ class MetaWeblog
     ###################################################
     # API implementations follow
 
-    # BLogger API
+    # Blogger API
  
+    # weird method sig, this.
     def deletePost(apikey, postId, user, pass, publish)
-        # weird method sig, this.
         store.deletePost(postId)
         return true
     end
@@ -115,8 +129,13 @@ class MetaWeblog
     end
     
     def getCategories(blogId, user, password)
+        # later blogging engines have actual tag support, and we
+        # don't have to fake things with cstegories. I think jekyll has proper
+        # category support, though, so it might be worth looking at that some
+        # time..
         return []
-        return store.posts.map{|p| p.tags }.flatten.uniq
+        
+        #return store.posts.map{|p| p.tags }.flatten.uniq
     end
     
     def getPost(postId, username, password)
@@ -131,8 +150,7 @@ class MetaWeblog
     end
 
     def newPost(blogId, username, password, data, publish)
-        date = Date.today
-        post = store.newPost(date)
+        post = store.newPost(Date.today) # date is just default
         populate(post, data)
         post.write
         return post.filename
@@ -145,11 +163,7 @@ class MetaWeblog
     # MoveableType API
 
     def supportedTextFilters()
-        # keys should map to file extensions. TODO - reuse same list in populate.
-        return [
-            { "key" => "markdown", "label" => "Markdown" },
-            { "key" => "html", "label" => "HTML" },
-        ]
+        return @@filters
     end
     
     def getCategoryList(blogId, user, pass)
@@ -171,8 +185,30 @@ class MetaWeblog
     # wordpress API
     
     def getPages(blogId, user, pass, limit)
-        return []
+        pages = store.pages[0,limit]
+        return pages.map{|p| page_response(p) }
     end
+    
+    def getTags(blogId, user, pass)
+        all_tags = ( store.posts + store.pages ).map{|p| p.tags }.flatten
+        grouped = {}
+        all_tags.each_with_index{|t, i|
+            grouped[t] ||= {
+                :tag_id => i,
+                :name => t,
+                :count => 0,
+                :slug => t,
+            }
+            grouped[t][:count] += 1
+        }
+        return grouped.values
+    end
+    
+    def editPage(blogId, pageId, user, pass, data)
+        # TODO
+        return false
+    end
+
 
 
 end

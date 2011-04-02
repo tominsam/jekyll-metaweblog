@@ -11,13 +11,18 @@ class Post
 
         # filenames need to start with a date
         m = self.filename.match(/^(\d{4})-(\d\d)-(\d\d)-(.+?).(\w+)$/)
-        if not m
-            puts "Can't parse #{ self.filename } as date"
-            return
+        if m
+            self.date = Date.civil(m[1].to_i, m[2].to_i, m[3].to_i)
+            self.slug = m[4]
+            self.filetype = m[5]
+        elsif m = self.filename.match(/^(.*)\.([^\.]+)$/)
+            #puts "Can't parse #{ self.filename } as date"
+            self.date = nil
+            self.slug = self.filename
+            self.filetype = nil
+        else
+            puts "Can't parse #{self.filename} at all"
         end
-        self.date = Date.civil(m[1].to_i, m[2].to_i, m[3].to_i)
-        self.slug = m[4]
-        self.filetype = m[5]
     end
     
     
@@ -28,12 +33,20 @@ class Post
             return false
         end
 
-        content = File.open(File.join(self.base, self.filename), "r") {|f| f.read }
+        # read the first 100k from the file. If the post is longer than this, it'll be truncated.
+        # but we need to limit to a certain point or we'll slurp in the entirety of every file
+        # in the folder.
+        content = File.open(File.join(self.base, self.filename), "r") {|f| f.read(100 * 1024) }
+        
+        if not content
+            puts "can't read #{self.filename}"
+            return false
+        end
         
         # file must begin with YAML
         preamble = content.split(/---\s*\n/)[1]
         if not preamble
-            puts "#{ self.filename } looks like a post but doesn't start with YAML preamble!"
+            #puts "#{ self.filename } looks like a post but doesn't start with YAML preamble!"
             return false
         end
         self.data = YAML.load(preamble)
@@ -52,9 +65,15 @@ class Post
     end
     
     def write
-        old_file = File.join(self.base, self.filename)
-        new_file = File.join(self.base, sprintf("%04d-%02d-%02d-%s.%s", self.date.year, self.date.month, self.date.day, self.slug, self.filetype))
+        # TODO - create _posts folder.
+        # TODO - move this to the store.
         
+        old_file = File.join(self.base, self.filename)
+        if self.date
+            new_file = File.join(self.base, sprintf("%04d-%02d-%02d-%s.%s", self.date.year, self.date.month, self.date.day, self.slug, self.filetype))
+        else
+            new_file = File.join(self.base, self.slug)
+        end
         
         puts "** new_file #{ new_file }"
         puts "   old_file #{ old_file }"
@@ -64,11 +83,12 @@ class Post
             f.write "---\n"
             f.write self.body.strip + "\n"
         end
-        File.rename( new_file + ".temp", new_file )
 
         if new_file != old_file and File.exist? old_file
             File.delete old_file
         end
+
+        File.rename( new_file + ".temp", new_file )
     end
 
     def to_s
