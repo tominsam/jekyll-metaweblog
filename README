@@ -1,0 +1,28 @@
+## jekyll-metaweblog
+
+A stand-alone server that will expose a Jekyll source folder via the Blogger / MT / Wordpress XML-RPC metaweblog interface, allowing you to create/edit/delete posts and pages using a GUI client, such as Marsedit.
+
+
+
+### Usage
+
+  ruby server.rb --port 4040 /path/to/jekyll/folder
+
+Then point your weblog client to http://localhost:4040/ and start editing.
+
+
+### TODO
+
+* username/password support, so it's safe to run on a remote server
+
+* run the jekyll processor in the same process, so you can run a single command line that will build your blog _and_ expose it to GUI clients.
+
+* file upload support
+
+* add support for clients that aren't Marsedit (by actually trying them)
+
+* finish page support
+
+* fix all the bugs. AHAHAHAHAHAHAHAH
+
+
