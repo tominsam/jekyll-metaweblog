@@ -1,4 +1,6 @@
+require 'rubygems'
 require 'json'
+require 'xmlrpc/server'
 
 # not just the metaweblog API - this is _all_ the APIs crammed into one namespace. Ugly.
 
@@ -11,87 +13,120 @@ require 'json'
 
 
 class MetaWeblog
-    attr_accessor :store
+    attr_accessor :store, :filters, :custom_field_names
     
-    # keys should map to file extensions. We rename the file if the filter is changed.
-    @@filters = [
-        { "key" => "markdown", "label" => "Markdown" },
-        { "key" => "html", "label" => "HTML" },
-    ]
 
     def initialize(store)
         self.store = store
+
+        # keys should map to file extensions. We rename the file if the filter is changed.
+        self.filters = [
+            { "key" => "markdown", "label" => "Markdown" },
+            { "key" => "html", "label" => "HTML" },
+        ]
+        
+        self.custom_field_names = [ :layout, :textlink, :permalink ]
     end
     
     # convert a post into a structure that we expect to return from metaweblog. Some repetition
-    # here to convince stroppy clients that we really do mean these things.
+    # here to convince stroppy clients that we really do mean these things. Be careful to not
+    # return any nils, XML-RPC can't cope with them.
     def post_response(post)
+        # if the file extension is one of the permitted filters, treat it as a filter
+        m = post.slug.match(/^(.*)\.(.*?)$/)
+        if m and self.filters.map{|f| f["key"] }.include? m[2]
+            basename = m[1]
+            filter_key = m[2]
+        else
+            basename = post.slug
+            filter_key = "0" # means 'no filter'
+        end 
+        
         return {
             :postId => post.filename,
             :title => post.title || "",
             :description => post.body || "",
-            :dateCreated => post.date,
+            :dateCreated => post.date || Date.today,
             :categories => [],
             :link => post.data["link"] || "",
-            :mt_basename => post.slug,
+            :mt_basename => basename,
             :mt_tags => post.tags.join(", "),
             :mt_keywords => post.tags.join(", "),
             :custom_fields => custom_fields(post),
+            :mt_convert_breaks => filter_key,
         }
     end
+    
+    # wordpress pages have all the stuff posts have, and also some extra things.
+    # These must be present, or Marsedit will just dump them in with the posts.
     def page_response(post)
         return post_response(post).merge({
-            :page_id => post.filename,
-            :dateCreated => Date.today,
-            :page_status => "published",
-            :wp_page_template => post.data["layout"],
+            :page_id => post.filename, # spec says this is an integer, but most clients I've tried can cope.
+            :dateCreated => Date.today, # Not happy about this.
+            :page_status => "published", # wild guess
+            :wp_page_template => post.data["layout"] || "",
         })
     end
     
     # return a custom post data structure. Can't just return eveything, because if the
     # client returns it all, it'll overwrite things like the title.
-    # TODO - this needs to be a configurable list. Maybe just remove the known ones
-    # and return everything else? but then we're coercing everything down to a string.
     def custom_fields(post)
-        fields = [ :layout, :textlink ]
-        return fields.map{|k| { :key => k, :value => post.data[k.to_s] ? post.data[k.to_s].to_s : "" } }
+        return self.custom_field_names.map{|k| { :key => k, :value => post.data[k.to_s] ? post.data[k.to_s].to_s : "" } }
     end
     
     
     # given a post object, and an incoming metaweblog data structure, populate the post from the data.
     def populate(post, data)
         post.title = data["title"]
-        post.body = data["description"].strip
+
+        if data["description"]
+            post.body = data["description"].strip
+        end
+
         post.data["link"] = data["link"]
 
-        if data.include? "mt_basename"
-            post.slug = data["mt_basename"]
-        end
-        
         # try not to destroy post tags if the client doens't send any tag information.
-        # otherwise, combine tags and keywords (clients aren't consistent)
+        # otherwise, combine tags and keywords (clients aren't consistent). Will this
+        # make it hard to remove tags? Needs testing.
         tags = nil
         if data.include? "mt_tags"
             tags ||= []
-            tags << data["mt_tags"].split(/\s*,\s*/)
+            tags += data["mt_tags"].split(/\s*,\s*/)
         end
         if data.include? "mt_keywords"
             tags ||= []
-            tags << data["mt_keywords"].split(/\s*,\s*/)
+            tags += data["mt_keywords"].split(/\s*,\s*/)
         end
         if not tags.nil?
             post.tags = tags.sort.uniq
         end
 
-        # this (in theory) will map directly to file extension
-        if data.include? "mt_convert_breaks"
-            conv = data["mt_convert_breaks"]
-            if @@filters.map{|f| f["key"] }.include? conv
-                post.filetype = conv
+
+        if data.include? "mt_convert_breaks" or data.include? "mt_basename"
+            # if the file extension is one of the permitted filters, treat it as a filter
+            m = post.slug.match(/^(.*)\.(.*?)$/)
+            if m and self.filters.map{|f| f["key"] }.include? m[2]
+                basename = m[1]
+                filter_key = m[2]
+            else
+                basename = post.slug
+                filter_key = "0" # means 'no filter'
+            end 
+        
+            if data.include? "mt_basename"
+                basename = data["mt_basename"]
+            end
+
+            if data.include? "mt_convert_breaks"
+                filter_key = data["mt_convert_breaks"]
+            end
+            
+            post.slug = basename
+            if filter_key != "0"
+                post.slug += "." + filter_key
             end
         end
 
-        
         if data.include? "custom_fields"
             for field in data["custom_fields"]
                 post.data[ field["key"] ] = field["value"]
@@ -102,7 +137,7 @@ class MetaWeblog
     
 
     def getPostOrDie(postId)
-        post = store.getPost(postId)
+        post = store.get(postId)
         if not post
             raise XMLRPC::FaultException.new(-99, "post not found")
         end
@@ -116,8 +151,7 @@ class MetaWeblog
  
     # weird method sig, this.
     def deletePost(apikey, postId, user, pass, publish)
-        store.deletePost(postId)
-        return true
+        return store.delete(postId)
     end
 
 
@@ -145,14 +179,14 @@ class MetaWeblog
     def editPost(postId, username, password, data, publish)
         post = getPostOrDie(postId)
         populate(post, data)
-        post.write
+        store.write(post)
         return true
     end
 
     def newPost(blogId, username, password, data, publish)
-        post = store.newPost(Date.today) # date is just default
+        post = store.create(:post, nil, Date.today) # date is just default
         populate(post, data)
-        post.write
+        store.write(post)
         return post.filename
     end
 
@@ -163,7 +197,7 @@ class MetaWeblog
     # MoveableType API
 
     def supportedTextFilters()
-        return @@filters
+        return self.filters
     end
     
     def getCategoryList(blogId, user, pass)
@@ -184,6 +218,11 @@ class MetaWeblog
     
     # wordpress API
     
+    def getPage(blogId, pageId, user, pass)
+        page = store.get(pageId)
+        return page_response(page)
+    end
+    
     def getPages(blogId, user, pass, limit)
         pages = store.pages[0,limit]
         return pages.map{|p| page_response(p) }
@@ -194,7 +233,7 @@ class MetaWeblog
         grouped = {}
         all_tags.each_with_index{|t, i|
             grouped[t] ||= {
-                :tag_id => i,
+                :tag_id => t, # TODO - spec says this is an int. But I can't do that.
                 :name => t,
                 :count => 0,
                 :slug => t,
@@ -204,9 +243,11 @@ class MetaWeblog
         return grouped.values
     end
     
-    def editPage(blogId, pageId, user, pass, data)
-        # TODO
-        return false
+    def editPage(blogId, pageId, user, pass, data, publish)
+        page = @store.get(pageId)
+        populate(page, data)
+        @store.write(page)
+        return true
     end
 
 
