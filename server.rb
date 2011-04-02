@@ -66,10 +66,14 @@ server.set_service_hook do |obj, *args|
     puts "calling #{obj.name}(#{args.map{|a| a.inspect}.join(", ")})"
     begin
         ret = obj.call(*args)  # call the original service-method
-        puts "   " + ret.inspect[0,80]
+        puts "   #{obj.name} returned " + ret.inspect[0,80]
+        
+        if ret.inspect.match(/[^\"]nil[^\"]/)
+            puts "found a nil in " + ret.inspect
+        end
         ret
     rescue
-        puts "  call exploded"
+        puts "  #{obj.name} call exploded"
         puts $!
         raise XMLRPC::FaultException.new(-99, "error calling #{obj.name}: #{$!}")
     end
