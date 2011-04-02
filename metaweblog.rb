@@ -98,6 +98,14 @@ class MetaWeblog
         end
 
         post.data["link"] = data["link"]
+        
+        if d = data["dateCreated"]
+            if d.instance_of? XMLRPC::DateTime
+                post.date = Date.civil(d.year, d.month, d.day)
+            else
+                puts "Can't deal with date #{d}"
+            end
+        end
 
         # try not to destroy post tags if the client doens't send any tag information.
         # otherwise, combine tags and keywords (clients aren't consistent). Will this
@@ -192,16 +200,6 @@ class MetaWeblog
     end
     
     def getPost(postId, username, password, extra = {})
-        # post = store.get(postId)
-        # if not post
-        #     if extra and extra["date_created_gmt"]
-        #         post = store.new(:post, postId)
-        #         populate(post, extra)
-        #         store.write(post)
-        #     else
-        #         raise XMLRPC::FaultException.new(-99, "post not found")
-        #     end
-        # end
         return post_response(getPostOrDie(postId))
     end
 
