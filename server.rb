@@ -2,16 +2,50 @@
 require 'rubygems'
 require 'webrick'
 require 'xmlrpc/server'
+require 'optparse'
 
 require 'store'
 require 'metaweblog'
 
-folder = ARGV[0] || "../blogtest"
+options = {}
+
+optparse = OptionParser.new do|opts|
+    # Set a banner, displayed at the top
+    # of the help screen.
+    opts.banner = "Usage: #$0 [options] jeykll_blog_root"
+
+    # Define the options, and what they do
+    options[:port] = 4040
+    opts.on( '-p', '--port', 'Server port' ) do |port|
+        options[:port] = port.to_i > 0 ? port.to_i : 4040
+    end
+
+    options[:host] = "127.0.0.1"
+    opts.on( '-h', '--host', 'Bind to host' ) do |host|
+        options[:host] = host
+    end
+
+    # This displays the help screen, all programs are
+    # assumed to have this option.
+    opts.on( '-h', '--help', 'Display this screen' ) do
+        puts opts
+        exit
+    end
+end
+
+optparse.parse!
+
+folder = ARGV[0]
+
+if not folder or folder.size == 0 or not File.directory? folder
+    puts "not a folder"
+    exit
+end
 
 store = Store.new(folder)
 
-# do this here just to demonstrate that the store can load everything, rather than 
-# waiting for a method call, where it's harder to get a stack trace.
+# debugging - do this here just to demonstrate that the store can load everything,
+# rather than waiting for a method call, where it's harder to get a stack trace.
 store.posts
 store.pages
 
@@ -20,7 +54,7 @@ metaWeblog = MetaWeblog.new(store)
 # test again
 metaWeblog.getRecentPosts(nil, nil, nil, 100000)
 
-server = XMLRPC::Server.new(4040) # , "0.0.0.0")
+server = XMLRPC::Server.new(options[:port], options[:host])
 
 # namespaces are for the WEAK
 server.add_handler("blogger", metaWeblog)
