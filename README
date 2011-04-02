@@ -6,10 +6,13 @@ A stand-alone server that will expose a Jekyll source folder via the Blogger / M
 
 ### Usage
 
-  ruby server.rb --port 4040 /path/to/jekyll/folder
+  ruby server.rb --port 4040 --root /path/to/jekyll/folder
 
 Then point your weblog client to http://localhost:4040/ and start editing.
 
+### Limitations
+
+If you change the slug or the text filter of an entry, you'll need to refresh the blog after you save it. (I use the filename as the post ID, but changing the slug or the filter changes the filename, so the GUI tool will lose the connection)
 
 ### TODO
 
@@ -19,11 +22,11 @@ Then point your weblog client to http://localhost:4040/ and start editing.
 
 * file upload support
 
-* add support for clients that aren't Marsedit (by actually trying them)
+* Support for more clients (this mostly consists of trying them and fixing the broken things)
 
-* finish page support (needs add page, edit page, delete page)
+* category support (assuming jekyll does categories and anyone cares)
 
-* write tests
+* Support for wordpress IOS clients. This is _hard_, because they're using undocumented API calls and make assumptions about what IDs look like that I'm not happy with (it assumes they're numbers).
 
 * everything else in the code with "TODO" by it.
 

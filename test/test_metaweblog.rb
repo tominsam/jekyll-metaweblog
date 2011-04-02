@@ -16,7 +16,7 @@ class TestMetaWeblog < Test::Unit::TestCase
         
         @store = Store.new(@base)
 
-        @meta = MetaWeblog.new(@store)
+        @meta = MetaWeblog.new(@store, "localhost", 4040)
         
         @blogId = 1
         @user = "user"

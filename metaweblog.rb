@@ -13,11 +13,14 @@ require 'xmlrpc/server'
 
 
 class MetaWeblog
-    attr_accessor :store, :filters, :custom_field_names
+    attr_accessor :store, :filters, :custom_field_names, :host, :port
     
 
-    def initialize(store)
+    def initialize(store, host, port)
         self.store = store
+        self.host = host
+        self.port = port
+
 
         # keys should map to file extensions. We rename the file if the filter is changed.
         self.filters = [
@@ -40,11 +43,18 @@ class MetaWeblog
         else
             basename = post.slug
             filter_key = "0" # means 'no filter'
-        end 
+        end
+        
+        # always return _something_ as a title, rather than a blank string. Not totally
+        # happy about this, but lots of clients insist on a title.
+        title = post.title || ""
+        if title.size == 0
+            title = post.slug
+        end
         
         return {
             :postId => post.filename,
-            :title => post.title || "",
+            :title => title,
             :description => post.body || "",
             :dateCreated => post.date || Date.today,
             :categories => [],
@@ -54,6 +64,7 @@ class MetaWeblog
             :mt_keywords => post.tags.join(", "),
             :custom_fields => custom_fields(post),
             :mt_convert_breaks => filter_key,
+            :post_status => "publish",
         }
     end
     
@@ -63,7 +74,7 @@ class MetaWeblog
         return post_response(post).merge({
             :page_id => post.filename, # spec says this is an integer, but most clients I've tried can cope.
             :dateCreated => Date.today, # Not happy about this.
-            :page_status => "published", # wild guess
+            :page_status => "publish",
             :wp_page_template => post.data["layout"] || "",
         })
     end
@@ -77,7 +88,10 @@ class MetaWeblog
     
     # given a post object, and an incoming metaweblog data structure, populate the post from the data.
     def populate(post, data)
-        post.title = data["title"]
+        # we send the slug as the title if there's no title. Don't take it back.
+        if data["title"] != post.slug
+            post.title = data["title"]
+        end
 
         if data["description"]
             post.body = data["description"].strip
@@ -112,7 +126,7 @@ class MetaWeblog
                 basename = post.slug
                 filter_key = "0" # means 'no filter'
             end 
-        
+            
             if data.include? "mt_basename"
                 basename = data["mt_basename"]
             end
@@ -121,6 +135,11 @@ class MetaWeblog
                 filter_key = data["mt_convert_breaks"]
             end
             
+            # have to have _something_
+            if not basename.match(/\./) and filter_key == "0"
+                filter_key = "html"
+            end
+        
             post.slug = basename
             if filter_key != "0"
                 post.slug += "." + filter_key
@@ -172,7 +191,17 @@ class MetaWeblog
         #return store.posts.map{|p| p.tags }.flatten.uniq
     end
     
-    def getPost(postId, username, password)
+    def getPost(postId, username, password, extra = {})
+        # post = store.get(postId)
+        # if not post
+        #     if extra and extra["date_created_gmt"]
+        #         post = store.new(:post, postId)
+        #         populate(post, extra)
+        #         store.write(post)
+        #     else
+        #         raise XMLRPC::FaultException.new(-99, "post not found")
+        #     end
+        # end
         return post_response(getPostOrDie(postId))
     end
 
@@ -183,7 +212,7 @@ class MetaWeblog
         return true
     end
 
-    def newPost(blogId, username, password, data, publish)
+    def newPost(blogId, username, password, data, publish = true)
         post = store.create(:post, nil, Date.today) # date is just default
         populate(post, data)
         store.write(post)
@@ -195,11 +224,13 @@ class MetaWeblog
 
     
     # MoveableType API
-
+    
     def supportedTextFilters()
         return self.filters
     end
     
+    # no categories yet.
+
     def getCategoryList(blogId, user, pass)
         return []
     end
@@ -248,6 +279,21 @@ class MetaWeblog
         populate(page, data)
         @store.write(page)
         return true
+    end
+    
+    def getUsersBlogs(something, user, pass)
+        return [
+            { :isAdmin => true,
+                :url => "http://#{self.host}:#{self.port}/",
+                :blogId => 1,
+                :blogName => "jekyll",
+                :xmlrpc => "http://#{self.host}:#{self.port}/xmlrpc.php",
+            }
+        ]
+    end
+    
+    def getComments(postId, user, pass, extra)
+        return []
     end
 
 
