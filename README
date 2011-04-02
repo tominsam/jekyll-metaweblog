@@ -21,8 +21,11 @@ Then point your weblog client to http://localhost:4040/ and start editing.
 
 * add support for clients that aren't Marsedit (by actually trying them)
 
-* finish page support
+* finish page support (needs add page, edit page, delete page)
+
+* write tests
+
+* everything else in the code with "TODO" by it.
 
 * fix all the bugs. AHAHAHAHAHAHAHAH
-
 
