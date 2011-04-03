@@ -185,7 +185,7 @@ class MetaWeblog
     # Metaweblog API
     
     def getRecentPosts(blogId, user, password, limit)
-        posts = store.posts[0,limit]
+        posts = store.posts[0,limit.to_i]
         return posts.map{|p| post_response(p) }
     end
     
@@ -279,7 +279,7 @@ class MetaWeblog
         return true
     end
     
-    def getUsersBlogs(something, user, pass)
+    def getUsersBlogs(something, user, pass = nil) # TODO - it's the _first_ param that is optional
         return [
             { :isAdmin => true,
                 :url => "http://#{self.host}:#{self.port}/",
