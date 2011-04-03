@@ -79,6 +79,18 @@ class Store
         end
     end
     
+    
+    def saveFile(name, data)
+        filename = File.join(self.base, "uploads", name)
+        if not File.directory?(File.dirname(filename))
+            FileUtils.mkdir_p(File.dirname(filename))
+        end
+        File.open(filename, "wb") {|f|
+            f.write(data)
+        }
+        return "uploads/#{name.gsub(/^\//,'')}"
+    end
+    
   
 end
 

@@ -218,6 +218,11 @@ class MetaWeblog
     end
 
 
+    def newMediaObject(blogId, username, password, data)
+        path = store.saveFile(data['name'], data['bits'])
+        return { :url => "http://#{self.host}:#{self.port}/#{path}" }
+    end
+
 
 
     

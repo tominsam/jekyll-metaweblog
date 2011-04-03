@@ -22,6 +22,7 @@ If you change the slug, date, or the text filter of an entry, you'll need to ref
 
 Not all clients work. Let me know if you're using a weird client and having problems. And by weird, I mean, not Marsedit or Ecto, which are the two I have here.
 
+File upload support is very very new. Might work.
 
 
 ### TODO
@@ -29,8 +30,6 @@ Not all clients work. Let me know if you're using a weird client and having prob
 * username/password support, so it's safe to run on a remote server.
 
 * run the jekyll processor in the same process, so you can run a single command line that will build your blog _and_ expose it to GUI clients.
-
-* file upload support.
 
 * Support for more clients (this mostly consists of trying them and fixing the broken things)
 
