@@ -141,16 +141,19 @@ class MetaWeblog
 
             if data.include? "mt_convert_breaks"
                 filter_key = data["mt_convert_breaks"]
+                if filter_key == ""
+                    filter_key = "0"
+                end
             end
             
             # have to have _something_
-            if not basename.match(/\./) and filter_key == "0"
+            if not basename.match(/\../) and filter_key == "0"
                 filter_key = "html"
             end
         
             post.slug = basename
             if filter_key != "0"
-                post.slug += "." + filter_key
+                post.slug = post.slug.gsub(/\./,'') + "." + filter_key
             end
         end
 
