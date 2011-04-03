@@ -1,6 +1,8 @@
 ## jekyll-metaweblog
 
-A stand-alone server that will expose a Jekyll source folder via the Blogger / MT / Wordpress XML-RPC metaweblog interface, allowing you to create/edit/delete posts and pages using a GUI client, such as Marsedit.
+A stand-alone ruby/webrick server that will expose a Jekyll source folder via the Blogger / MT / Wordpress XML-RPC metaweblog interface, allowing you to create/edit/delete posts and pages using a GUI client, such as Marsedit.
+
+[jekyll-metaweblog is available on Github](https://github.com/tominsam/jekyll-metaweblog), and is under active development. It's not perfect, but it works.
 
 
 
