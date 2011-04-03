@@ -6,15 +6,19 @@ A stand-alone server that will expose a Jekyll source folder via the Blogger / M
 
 ### Usage
 
-  ruby server.rb --port 4040 --root /path/to/jekyll/folder
+  ruby jm_server.rb --port 4040 --root /path/to/jekyll/folder
 
-Then point your weblog client to http://localhost:4040/ and start editing.
+Then point your weblog client to http://localhost:4040/xmlrpc.php and start editing.
+
+By default, the server will publish the `_site` folder inside your root folder as web pages as well. This is for convenience to to convince certain unruly clients that there really is a web page there. Use the `--web` parameter if you want to publish a different folder.
+
+This code doesn't (yet) auto-publish things you save through jekyll, so you'll probably also want to have your `jekyll --auto` command-line process running in a different terminal window.
 
 
 
 ### Limitations
 
-If you change the slug, date, or the text filter of an entry, you'll need to refresh the blog after you save it. (I use the filename as the post ID, but changing the slug or the filter changes the filename, so the GUI tool will lose the connection). I might be able to work round this.
+If you change the slug, date, or the text filter of an entry, you'll need to refresh the blog after you save it. (I use the filename as the post ID, but changing the slug or the filter changes the filename, so the GUI tool will lose the connection).
 
 Not all clients work. Let me know if you're using a weird client and having problems. And by weird, I mean, not Marsedit or Ecto, which are the two I have here.
 
@@ -38,3 +42,4 @@ Not all clients work. Let me know if you're using a weird client and having prob
 
 * fix all the bugs. AHAHAHAHAHAHAHAH
 
+* Test - can I work around the slug/date changing the ID by responding to getPage( old_id ) and returning a page with the new ID? Most clients seem to call getPage after making changes.

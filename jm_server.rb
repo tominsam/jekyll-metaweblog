@@ -92,6 +92,7 @@ server.set_service_hook do |obj, *args|
     rescue
         puts "  #{name} call exploded"
         puts $!
+        puts $!.backtrace
         raise XMLRPC::FaultException.new(-99, "error calling #{name}: #{$!}")
     end
 end
