@@ -69,13 +69,13 @@ class Store
     end
 
     def create(type = :page, slug = nil, date = nil)
-        slug ||= (Time.now.to_i * 3).to_s
+        slug ||= (Time.now.to_i * 3).to_s + ".markdown" # TODO - default extension should be configurable
         if type == :page
             return Post.new(self.base, slug)
         else
             date ||= Date.today
-            filename = sprintf("%04d-%02d-%02d-%s", date.year, date.month, date.day, slug)
-            return Post.new(File.join(self.base, "_posts"), filename)
+            filename = sprintf("_posts/%04d-%02d-%02d-%s", date.year, date.month, date.day, slug)
+            return Post.new(self.base, filename)
         end
     end
     
