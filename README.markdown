@@ -6,7 +6,7 @@ A stand-alone server that will expose a Jekyll source folder via the Blogger / M
 
 ### Usage
 
-  ruby jm_server.rb --port 4040 --root /path/to/jekyll/folder
+    ruby jm_server.rb --port 4040 --root /path/to/jekyll/folder
 
 Then point your weblog client to http://localhost:4040/xmlrpc.php and start editing.
 
