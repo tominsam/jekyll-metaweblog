@@ -42,3 +42,5 @@ File upload support is very very new. Might work.
 * fix all the bugs. AHAHAHAHAHAHAHAH
 
 * Test - can I work around the slug/date changing the ID by responding to getPage( old_id ) and returning a page with the new ID? Most clients seem to call getPage after making changes.
+
+* Draft post/page support. Write things into a _drafts folder or something.
