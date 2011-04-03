@@ -10,11 +10,15 @@ A stand-alone server that will expose a Jekyll source folder via the Blogger / M
 
 Then point your weblog client to http://localhost:4040/ and start editing.
 
+
+
 ### Limitations
 
 If you change the slug, date, or the text filter of an entry, you'll need to refresh the blog after you save it. (I use the filename as the post ID, but changing the slug or the filter changes the filename, so the GUI tool will lose the connection). I might be able to work round this.
 
 Not all clients work. Let me know if you're using a weird client and having problems. And by weird, I mean, not Marsedit or Ecto, which are the two I have here.
+
+
 
 ### TODO
 
@@ -28,7 +32,7 @@ Not all clients work. Let me know if you're using a weird client and having prob
 
 * category support (assuming jekyll does categories and anyone cares)
 
-* Support for wordpress IOS clients. This is _hard_, because they're using undocumented API calls and make assumptions about what IDs look like that I'm not happy with (it assumes they're numbers). (update - may not be true. working on it)
+* Support for wordpress IOS clients. This is _hard_, because they're using undocumented API calls and make assumptions about what IDs look like that I'm not happy with (it assumes they're numbers).
 
 * everything else in the code with "TODO" by it.
 
