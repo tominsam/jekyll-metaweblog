@@ -1,6 +1,8 @@
 require 'rubygems'
 require 'json'
 require 'xmlrpc/server'
+require 'store'
+require 'monkeypatch'
 
 # not just the metaweblog API - this is _all_ the APIs crammed into one namespace. Ugly.
 
@@ -13,13 +15,14 @@ require 'xmlrpc/server'
 
 
 class MetaWeblog
-    attr_accessor :store, :filters, :custom_field_names, :host, :port
+    attr_accessor :store, :filters, :custom_field_names, :host, :port, :password
     
 
-    def initialize(store, host, port)
+    def initialize(store, host, port, password)
         self.store = store
         self.host = host
         self.port = port
+        self.password = password # TODO - use this
 
 
         # keys should map to file extensions. We rename the file if the filter is changed.
@@ -302,6 +305,46 @@ class MetaWeblog
         return []
     end
 
+end
 
+
+
+def attach_metaweblog_methods(server, options)
+    store = Store.new(options[:root])
+
+    # namespaces are for the WEAK
+    metaWeblog = MetaWeblog.new(store, options[:host], options[:port], options[:password])
+    server.add_handler("blogger", metaWeblog)
+    server.add_handler("metaWeblog", metaWeblog)
+    server.add_handler("mt", metaWeblog)
+    server.add_handler("wp", metaWeblog)
+    server.add_introspection # the wordpress IOS client requires this
+
+
+    # this is just debugging
+
+    server.set_service_hook do |obj, *args|
+        name = (obj.respond_to? :name) ? obj.name : obj.to_s
+        STDERR.puts "calling #{name}(#{args.map{|a| a.inspect}.join(", ")})"
+        begin
+            ret = obj.call(*args)  # call the original service-method
+            STDERR.puts "   #{name} returned " + ret.inspect[0,2000]
+        
+            if ret.inspect.match(/[^\"]nil[^\"]/)
+                STDERR.puts "found a nil in " + ret.inspect
+            end
+            ret
+        rescue
+            STDERR.puts "  #{name} call exploded"
+            STDERR.puts $!
+            STDERR.puts $!.backtrace
+            raise XMLRPC::FaultException.new(-99, "error calling #{name}: #{$!}")
+        end
+    end
+
+    server.set_default_handler do |name, *args|
+        STDERR.puts "** tried to call missing method #{name}( #{args.inspect} )"
+        raise XMLRPC::FaultException.new(-99, "Method #{name} missing or wrong number of parameters!")
+    end
 
 end

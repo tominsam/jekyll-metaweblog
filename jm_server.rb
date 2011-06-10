@@ -3,9 +3,7 @@ require 'rubygems'
 require 'webrick'
 require 'xmlrpc/server'
 require 'optparse'
-require 'store'
 require 'metaweblog'
-require 'monkeypatch'
 
 options = {}
 
@@ -46,8 +44,6 @@ end
 
 optparse.parse!
 
-
-
 if options[:root].nil? or not File.directory? options[:root]
     puts "option --root must be a folder"
     exit 1
@@ -57,51 +53,11 @@ if options[:web].nil?
     options[:web] = File.join(options[:root], "_site")
 end
 
-
 puts "Starting up with jekyll folder #{options[:root]}"
 puts "Serving web root #{options[:web]}"
 
-store = Store.new(options[:root])
-
-# debugging - do this here just to demonstrate that the store can load everything,
-# rather than waiting for a method call, where it's harder to get a stack trace.
-store.posts
-store.pages
-
 server = XMLRPC::WEBrickServlet.new
-
-# namespaces are for the WEAK
-metaWeblog = MetaWeblog.new(store, options[:host], options[:port])
-server.add_handler("blogger", metaWeblog)
-server.add_handler("metaWeblog", metaWeblog)
-server.add_handler("mt", metaWeblog)
-server.add_handler("wp", metaWeblog)
-server.add_introspection # the wordpress IOS client requires this
-
-server.set_service_hook do |obj, *args|
-    name = (obj.respond_to? :name) ? obj.name : obj.to_s
-    puts "calling #{name}(#{args.map{|a| a.inspect}.join(", ")})"
-    begin
-        ret = obj.call(*args)  # call the original service-method
-        puts "   #{name} returned " + ret.inspect[0,2000]
-        
-        if ret.inspect.match(/[^\"]nil[^\"]/)
-            puts "found a nil in " + ret.inspect
-        end
-        ret
-    rescue
-        puts "  #{name} call exploded"
-        puts $!
-        puts $!.backtrace
-        raise XMLRPC::FaultException.new(-99, "error calling #{name}: #{$!}")
-    end
-end
-
-server.set_default_handler do |name, *args|
-    puts "** tried to call missing method #{name}( #{args.inspect} )"
-    raise XMLRPC::FaultException.new(-99, "Method #{name} missing or wrong number of parameters!")
-end
-
+attach_metaweblog_methods(server, options)
 
 httpserver = WEBrick::HTTPServer.new(
     :Port => options[:port],
