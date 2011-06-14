@@ -284,7 +284,7 @@ class MetaWeblog
     end
     
     def editPage(blogId, pageId, user, pass, data, publish)
-        page = @store.get(pageId)
+        page = getPostOrDie(pageId)
         populate(page, data)
         @store.write(page)
         return true
@@ -310,7 +310,7 @@ end
 
 
 def attach_metaweblog_methods(server, options)
-    store = Store.new(options[:root])
+    store = Store.new(options[:root], options[:output])
 
     # namespaces are for the WEAK
     metaWeblog = MetaWeblog.new(store, options[:host], options[:port], options[:password])

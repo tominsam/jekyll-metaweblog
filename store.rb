@@ -1,10 +1,11 @@
 require "post"
 
 class Store
-    attr_accessor :base, :posts
+    attr_accessor :base, :posts, :output
   
-    def initialize(base)
+    def initialize(base, output = nil)
         self.base = base
+        self.output = output
     end
   
     def posts
@@ -66,6 +67,8 @@ class Store
  
     def write(post)
         post.write
+        self.render
+        #self.commit(post.filename)
     end
 
     def create(type = :page, slug = nil, date = nil)
@@ -91,6 +94,33 @@ class Store
         return "uploads/#{name.gsub(/^\//,'')}"
     end
     
+    
+    def commit(filename)
+        if File.directory? File.join(self.base, ".git")
+            system("git", "add", File.join(self.base, filename)) or raise "Can't add"
+            system("git", "ci", "-m", "jekyll-metaweblog commit") or raise "Can't commit"
+            system("git", "pull") or raise "Can't git pull"
+            system("git", "push") or raise "Can't git push"
+        end
+        # TODO - svn?
+    end
+    
+    # render the entire site through jekyll
+    def render
+        STDERR.puts("render to #{self.output}")
+        if self.output and File.directory? self.output
+            Dir.chdir(self.base)
+            command = ["jekyll", ".", self.output].join(" ")
+            STDERR.puts("running [[ #{command} ]]")
+            IO.popen(command) { |io|
+                while (line = io.gets) do
+                    STDERR.puts line
+                end
+            } 
+                
+        end
+        STDERR.puts("render complete")
+    end
   
 end
 
