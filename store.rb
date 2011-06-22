@@ -1,4 +1,5 @@
 require "post"
+require "fileutils"
 
 class Store
     attr_accessor :base, :posts, :output

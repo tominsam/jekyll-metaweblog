@@ -53,7 +53,12 @@ class Post
             #puts "#{ self.filename } looks like a post but doesn't start with YAML preamble!"
             return false
         end
-        self.data = YAML.load(preamble)
+        begin
+            self.data = YAML.load(preamble)
+        rescue Exception => e
+            STDERR.puts("can't load YAML from #{self.filename}\n\n#{preamble}")
+            raise
+        end
 
         # so, this is tricky. Should body contain preamble? not sure. Tilting
         # towards no right now - if you want something clever, do it with a
