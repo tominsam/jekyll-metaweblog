@@ -2,11 +2,12 @@ require "post"
 require "fileutils"
 
 class Store
-    attr_accessor :base, :posts, :output
+    attr_accessor :base, :posts, :output, :git
   
     def initialize(base, output = nil)
         self.base = base
         self.output = output
+        self.git = false
     end
   
     def posts
@@ -26,6 +27,9 @@ class Store
             #puts "walking #{ folder } under #{ base }"
             pages = []
             Dir.open(File.join(base,folder)).each{|file|
+                # drop . and ..
+                next if file.match(/^\.+$/)
+
                 # drop hidden files
                 next if file.match(/^[\.]/)
                 
@@ -68,8 +72,10 @@ class Store
  
     def write(post)
         post.write
+        if self.git
+            self.commit(post.filename)
+        end
         self.render
-        #self.commit(post.filename)
     end
 
     def create(type = :page, slug = nil, date = nil)
@@ -97,13 +103,13 @@ class Store
     
     
     def commit(filename)
-        if File.directory? File.join(self.base, ".git")
-            system("git", "add", File.join(self.base, filename)) or raise "Can't add"
-            system("git", "ci", "-m", "jekyll-metaweblog commit") or raise "Can't commit"
-            system("git", "pull") or raise "Can't git pull"
-            system("git", "push") or raise "Can't git push"
+        Dir.chdir(self.base) do
+            IO.popen("git add \"#{File.join(self.base, filename)}\" && git commit -m \"jekyll-metaweblog commit\" && git pull --rebase && git push" ) { |io|
+                while (line = io.gets) do
+                    STDERR.puts line
+                end
+            } 
         end
-        # TODO - svn?
     end
     
     # render the entire site through jekyll
