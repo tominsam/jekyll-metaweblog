@@ -56,14 +56,18 @@ class Post
         begin
             self.data = YAML.load(preamble)
         rescue Exception => e
-            STDERR.puts("can't load YAML from #{self.filename}\n\n#{preamble}")
-            raise
+            STDERR.puts("can't load YAML from #{self.filename}")
+            return false
         end
 
         # so, this is tricky. Should body contain preamble? not sure. Tilting
         # towards no right now - if you want something clever, do it with a
         # text editor.
         self.body = content.split(/---\s*\n/, 3)[2]
+        
+        if not self.data["permalink"]
+            self.data["permalink"] = "/" + self.filename.gsub(/\/index\.\w+$/,"/")
+        end
         
         return true
     end
@@ -79,6 +83,15 @@ class Post
             new_filename = self.slug
         end
         
+        if self.data["permalink"]
+            pm = self.data["permalink"].gsub(/\/index\.\w+$/,"/")
+            new_pm = "/" + new_filename.gsub(/\/index\.\w+$/,"/")
+            if pm == new_pm
+                self.data["permalink"] = nil
+                self.data.delete("permalink")
+            end
+        end
+
         # create surrounding folder.
         folder = File.dirname File.join(self.base, new_filename)
         if not File.directory? folder
