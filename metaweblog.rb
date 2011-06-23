@@ -31,7 +31,7 @@ class MetaWeblog
             { "key" => "html", "label" => "HTML" },
         ]
         
-        self.custom_field_names = [ :layout, :textlink, :permalink ]
+        self.custom_field_names = [ :layout, :textlink, :permalink, :precis ]
     end
     
     # convert a post into a structure that we expect to return from metaweblog. Some repetition
@@ -259,7 +259,7 @@ class MetaWeblog
     # wordpress API
     
     def getPage(blogId, pageId, user, pass)
-        page = store.get(pageId)
+        page = getPostOrDie(pageId)
         return page_response(page)
     end
     
@@ -289,6 +289,13 @@ class MetaWeblog
         @store.write(page)
         return true
     end
+
+    def newPage(blogId, user, pass, data, publish)
+        page = store.create(:page)
+        populate(page, data)
+        @store.write(page)
+        return page.filename
+    end
     
     def getUsersBlogs(something, user, pass = nil) # TODO - it's the _first_ param that is optional
         return [
@@ -310,7 +317,10 @@ end
 
 
 def attach_metaweblog_methods(server, options)
+    STDERR.puts("attaching with #{options.inspect}")
+
     store = Store.new(options[:root], options[:output])
+    store.git = true # TODO - make option
 
     # namespaces are for the WEAK
     metaWeblog = MetaWeblog.new(store, options[:host], options[:port], options[:password])
