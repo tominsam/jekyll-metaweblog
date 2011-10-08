@@ -301,9 +301,20 @@ class MetaWeblog
         return [
             { :isAdmin => true,
                 :url => "http://#{self.host}:#{self.port}/",
-                :blogId => 1,
+                :blogid => 1,
                 :blogName => "jekyll",
                 :xmlrpc => "http://#{self.host}:#{self.port}/xmlrpc.php",
+            }
+        ]
+    end
+    
+    # silly. But yes, there are both versions.
+    def getUserBlogs(something, user, pass = nil) # TODO - it's the _first_ param that is optional
+        return [
+            {
+                :url => "http://#{self.host}:#{self.port}/",
+                :blogid => 1, # I think caps here are important.
+                :blogName => "jekyll",
             }
         ]
     end
